@@ -1,0 +1,30 @@
+# Ignore Git and metadata
+.git/
+.gitignore
+.gcloudignore
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+.cache/
+.gemini/
+
+# Ignore virtual environments and cache
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Ignore local logs and database files
+logs/
+*.log
+trace_*.json
+
+# Ignore tests to speed up upload
+tests/
+tests**/
+*.py[cod]
