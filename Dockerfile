@@ -12,7 +12,10 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Install python dependencies
 COPY requirements.txt .
