@@ -16,6 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     npm \
     && rm -rf /var/lib/apt/lists/*
 
+# Pre-install Google Workspace MCP server to prevent runtime npm download timeouts
+RUN npm install -g @alanxchen/google-workspace-mcp
+
+
 
 # Install python dependencies
 COPY requirements.txt .

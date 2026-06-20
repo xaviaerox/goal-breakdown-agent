@@ -89,7 +89,8 @@ async def async_create_calendar_events(events_list: list) -> list:
         args = ["/c", "npx", "-y", "@alanxchen/google-workspace-mcp"]
     else:
         command = "npx"
-        args = ["-y", "@alanxchen/google-workspace-mcp"]
+        args = ["--no-install", "@alanxchen/google-workspace-mcp"]
+
         
     # Configure MCP Server parameters, copying parent environment to preserve paths
     env = os.environ.copy()
