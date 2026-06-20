@@ -37,6 +37,19 @@ def ensure_credentials_file():
     with open(target_file, "w", encoding="utf-8") as f:
         json.dump(creds_data, f, indent=2)
 
+    # Write token.json if GOOGLE_TOKEN_JSON environment variable is present
+    token_json_str = os.getenv("GOOGLE_TOKEN_JSON")
+    if token_json_str:
+        token_file = os.path.join(target_dir, "token.json")
+        try:
+            token_data = json.loads(token_json_str)
+            with open(token_file, "w", encoding="utf-8") as f:
+                json.dump(token_data, f, indent=2)
+            print("[Real MCP] Pre-seeded token.json from environment variable.", file=sys.stderr)
+        except Exception as e:
+            print(f"[Real MCP] Failed to parse GOOGLE_TOKEN_JSON environment variable: {str(e)}", file=sys.stderr)
+
+
 def run_async(coro):
     """
     Runs the given coroutine synchronously, handling existing event loops
