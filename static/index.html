@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goal Planning & Execution Agent</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fa;
+        }
+        h1 {
+            color: #1a1a1a;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #e1e4e6;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        @media(min-width: 600px) {
+            .form-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .goal-span {
+                grid-column: span 3;
+            }
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        input, textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #0066cc;
+        }
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            background-color: #ffe6e6;
+            color: #cc0000;
+            border: 1px solid #ffcccc;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 500;
+        }
+        .result-container {
+            margin-top: 30px;
+            border-top: 2px solid #eaeaea;
+            padding-top: 20px;
+            display: none;
+        }
+        
+        /* Tabs Styling */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #eaeaea;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: #0066cc;
+            border-bottom-color: #0066cc;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 15px;
+        }
+        .metadata-panel {
+            font-size: 13px;
+            color: #555;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        .score-badge {
+            background-color: #2e7d32;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .plan-section {
+            margin-bottom: 25px;
+        }
+        .plan-section h3 {
+            margin-bottom: 10px;
+            color: #1a1a1a;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 5px;
+        }
+        .timeline-badge {
+            background-color: #e6f2ff;
+            color: #0066cc;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        ul, ol {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        
+        /* Schedule Table */
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #e1e4e6;
+            padding: 10px;
+            text-align: left;
+        }
+        .schedule-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        /* MCP Synced operations log */
+        .mcp-op-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .mcp-op-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: #f4fbf4;
+            border-left: 4px solid #2e7d32;
+            margin-bottom: 6px;
+            border-radius: 0 4px 4px 0;
+            font-size: 13px;
+        }
+        .mcp-op-item.mcp-failed {
+            background-color: #fff8f8;
+            border-left-color: #c62828;
+        }
+        
+        .copy-btn {
+            background-color: #6c757d;
+        }
+        .copy-btn:hover {
+            background-color: #5a6268;
+        }
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 15px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #6c757d;
+            padding: 10px;
+        }
+        
+        /* Trace list and console logs */
+        .trace-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .trace-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .status-badge {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .status-completed {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-failed {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        pre {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+            font-size: 13px;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Goal Planning & Execution Agent</h1>
+        <p class="subtitle">A safe, composed concierge agent that schedules work blocks and syncs them automatically via MCP.</p>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="form-grid">
+            <div class="form-group goal-span">
+                <label for="goalInput">Enter your goal:</label>
+                <textarea id="goalInput" placeholder="e.g., Pass AI-900 exam, Learn Python backend, or Start a SaaS business..." maxlength="1200"></textarea>
+                <div class="meta-info">
+                    <span>Maximum 1000 characters</span>
+                    <span id="charCount">0 / 1000</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="deadlineInput">Target Completion Date:</label>
+                <input type="text" id="deadlineInput" placeholder="e.g., September 15" value="September 15">
+            </div>
+
+            <div class="form-group">
+                <label for="availabilityInput">Weekly Availability Window:</label>
+                <input type="text" id="availabilityInput" placeholder="e.g., Monday-Friday 20:00-21:30" value="Monday-Friday 20:00-21:30">
+            </div>
+
+            <div class="form-group">
+                <label for="sessionsInput">Weekend Session Prefs:</label>
+                <input type="text" id="sessionsInput" placeholder="e.g., Saturday 10:00-12:00" value="Saturday 10:00-12:00">
+            </div>
+        </div>
+
+        <button id="submitBtn">Generate & Sync Plan</button>
+
+        <div class="help-text">
+            <strong>Real Sync:</strong> Generates a full milestone roadmap and weekly schedule, then syncs study sessions directly to your Google Calendar.
+        </div>
+
+        <div id="resultContainer" class="result-container">
+            <!-- Tabs Menu -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('planTab')">Plan & Sync</button>
+                <button class="tab-btn" onclick="switchTab('traceTab')">Execution Trace</button>
+                <button class="tab-btn" onclick="switchTab('logsTab')">Agent Logs</button>
+            </div>
+
+            <!-- Plan Panel -->
+            <div id="planTab" class="tab-content active">
+                <div class="result-header">
+                    <div>
+                        <h2>Generated Action Plan</h2>
+                        <div class="metadata-panel">
+                            <strong>Execution ID:</strong> <span id="displayExecutionId"></span><br>
+                            <strong>Duration:</strong> <span id="displayDuration"></span> ms<br>
+                            <strong>Evaluation Score:</strong> <span id="displayScore" class="score-badge"></span><br>
+                            <strong>Skill Sequence:</strong> <span id="displaySkillSequence" style="font-family: monospace;"></span>
+                        </div>
+                    </div>
+                    <button id="copyBtn" class="copy-btn">Copy Markdown</button>
+                </div>
+
+                <div class="plan-section">
+                    <h3>Goal</h3>
+                    <p id="displayGoal" style="font-size: 18px; font-weight: bold;"></p>
+                </div>
+
+                <!-- MCP Synced Ops List -->
+                <div class="plan-section">
+                    <h3>MCP Sync Execution Status</h3>
+                    <div id="mcpOpsList" class="mcp-op-list"></div>
+                </div>
+
+                <!-- Schedule Section -->
+                <div class="plan-section">
+                    <h3>Recommended Study/Work Schedule</h3>
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>Week</th>
+                                <th>Day</th>
+                                <th>Session Time</th>
+                                <th>Session Focus Task</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="plan-section">
+                    <h3>Milestones</h3>
+                    <ol id="milestonesList"></ol>
+                </div>
+
+                <div class="plan-section">
+                    <h3>Tasks Checklist</h3>
+                    <ul id="tasksList"></ul>
+                </div>
+
+                <div class="plan-section">
+                    <h3>Estimated Timeline</h3>
+                    <div id="displayTimeline" class="timeline-badge"></div>
+                </div>
+            </div>
+
+            <!-- Trace Panel -->
+            <div id="traceTab" class="tab-content">
+                <h2>Execution Trace</h2>
+                <p>The sequence of operations run by the Agent Runtime:</p>
+                <ul id="traceList" class="trace-list"></ul>
+            </div>
+
+            <!-- Logs Panel -->
+            <div id="logsTab" class="tab-content">
+                <h2>Agent Console Logs</h2>
+                <p>Structured runtime decision logs:</p>
+                <pre><code id="logsConsole"></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const goalInput = document.getElementById('goalInput');
+        const deadlineInput = document.getElementById('deadlineInput');
+        const availabilityInput = document.getElementById('availabilityInput');
+        const sessionsInput = document.getElementById('sessionsInput');
+
+        const charCount = document.getElementById('charCount');
+        const submitBtn = document.getElementById('submitBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultContainer = document.getElementById('resultContainer');
+        const displayGoal = document.getElementById('displayGoal');
+        const milestonesList = document.getElementById('milestonesList');
+        const tasksList = document.getElementById('tasksList');
+        const displayTimeline = document.getElementById('displayTimeline');
+        const traceList = document.getElementById('traceList');
+        const logsConsole = document.getElementById('logsConsole');
+
+        // Metadata fields
+        const displayExecutionId = document.getElementById('displayExecutionId');
+        const displayDuration = document.getElementById('displayDuration');
+        const displayScore = document.getElementById('displayScore');
+        const displaySkillSequence = document.getElementById('displaySkillSequence');
+
+        // MCP list & Schedule body
+        const mcpOpsList = document.getElementById('mcpOpsList');
+        const scheduleBody = document.getElementById('scheduleBody');
+
+        let activePlan = null;
+
+        // Character count display
+        goalInput.addEventListener('input', () => {
+            const length = goalInput.value.length;
+            charCount.textContent = `${length} / 1000`;
+            if (length > 1000) {
+                charCount.style.color = '#cc0000';
+                charCount.style.fontWeight = 'bold';
+            } else {
+                charCount.style.color = '#666';
+                charCount.style.fontWeight = 'normal';
+            }
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+                btn.getAttribute('onclick').includes(tabId)
+            );
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            const activeContent = document.getElementById(tabId);
+            if (activeContent) activeContent.classList.add('active');
+        }
+
+        // Submit goal
+        submitBtn.addEventListener('click', async () => {
+            const goal = goalInput.value;
+            const deadline = deadlineInput.value;
+            const availability = availabilityInput.value;
+            const sessions = sessionsInput.value;
+
+            // Clear previous states
+            errorMessage.style.display = 'none';
+            resultContainer.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Executing Agent...';
+
+            // Client-side validations
+            if (!goal.trim()) {
+                showError("Goal cannot be empty.");
+                resetSubmitBtn();
+                return;
+            }
+
+            if (goal.length > 1000) {
+                showError("Goal cannot exceed 1000 characters.");
+                resetSubmitBtn();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/breakdown', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ goal, deadline, availability, sessions })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    showError(result.message || 'An error occurred.');
+                } else {
+                    renderAgentResponse(result.data);
+                }
+            } catch (err) {
+                showError('Could not connect to the server.');
+            } finally {
+                resetSubmitBtn();
+            }
+        });
+
+        // Copy markdown version
+        copyBtn.addEventListener('click', () => {
+            if (!activePlan) return;
+
+            const md = generateMarkdown(activePlan);
+            navigator.clipboard.writeText(md)
+                .then(() => {
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                    }, 2000);
+                })
+                .catch(() => {
+                    alert('Failed to copy to clipboard.');
+                });
+        });
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+            resultContainer.style.display = 'none';
+        }
+
+        function resetSubmitBtn() {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Generate & Sync Plan';
+        }
+
+        function renderAgentResponse(data) {
+            const plan = data.plan;
+            activePlan = plan;
+
+            // Render Metadata
+            displayExecutionId.textContent = data.trace.execution_id;
+            displayDuration.textContent = data.trace.duration_ms;
+            displayScore.textContent = `${data.trace.evaluation_score} / 100`;
+            displaySkillSequence.textContent = data.trace.skill_sequence.join(' → ');
+
+            // Render Plan
+            displayGoal.textContent = plan.goal;
+            
+            // Milestones list
+            milestonesList.innerHTML = '';
+            plan.milestones.forEach(m => {
+                const li = document.createElement('li');
+                li.textContent = m;
+                milestonesList.appendChild(li);
+            });
+
+            // Tasks list
+            tasksList.innerHTML = '';
+            plan.tasks.forEach(t => {
+                const li = document.createElement('li');
+                li.textContent = t;
+                tasksList.appendChild(li);
+            });
+
+            // Timeline
+            displayTimeline.textContent = plan.timeline;
+
+            // Render Schedule Table
+            scheduleBody.innerHTML = '';
+            if (plan.sessions && plan.sessions.length > 0) {
+                plan.sessions.forEach(s => {
+                    const tr = document.createElement('tr');
+                    
+                    const tdWeek = document.createElement('td');
+                    tdWeek.textContent = `Week ${s.week}`;
+                    
+                    const tdDay = document.createElement('td');
+                    tdDay.textContent = s.day;
+                    
+                    const tdTime = document.createElement('td');
+                    tdTime.textContent = s.time;
+                    
+                    const tdTask = document.createElement('td');
+                    tdTask.textContent = s.task;
+                    
+                    tr.appendChild(tdWeek);
+                    tr.appendChild(tdDay);
+                    tr.appendChild(tdTime);
+                    tr.appendChild(tdTask);
+                    scheduleBody.appendChild(tr);
+                });
+            } else {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 4;
+                td.textContent = "No sessions scheduled.";
+                tr.appendChild(td);
+                scheduleBody.appendChild(tr);
+            }
+
+            // Render MCP operations list
+            mcpOpsList.innerHTML = '';
+            if (data.trace.mcp_operations && data.trace.mcp_operations.length > 0) {
+                data.trace.mcp_operations.forEach(op => {
+                    const div = document.createElement('div');
+                    div.className = `mcp-op-item ${op.status !== 'success' ? 'mcp-failed' : ''}`;
+                    
+                    const icon = '📅';
+                    const targetName = 'Google Calendar';
+                    const statusText = op.status === 'success' ? 'Successfully synced' : `Failed: ${op.status}`;
+                    div.textContent = `${icon} [${targetName}] ${statusText}: "${op.title}"`;
+                    mcpOpsList.appendChild(div);
+                });
+            } else {
+                mcpOpsList.innerHTML = '<div class="mcp-op-item mcp-failed">No calendar events synced.</div>';
+            }
+
+            // Render Execution Trace
+            traceList.innerHTML = '';
+            const traceSteps = [
+                { name: "Goal Input Validation & Guardrails", status: data.trace.status === "failed" && data.trace.skill_sequence.length === 0 ? "FAILED" : "COMPLETED" },
+                { name: "Skill Discovery", status: "COMPLETED" }
+            ];
+            
+            data.trace.skill_sequence.forEach(skill => {
+                traceSteps.push({
+                    name: `Execute Skill [${skill}]`,
+                    status: "COMPLETED"
+                });
+            });
+            
+            traceSteps.push({ name: "MCP Execution Layer Sync", status: data.trace.status === "failed" ? "FAILED" : "COMPLETED" });
+            
+            traceSteps.forEach((t, idx) => {
+                const li = document.createElement('li');
+                li.className = 'trace-item';
+                
+                const stepSpan = document.createElement('span');
+                stepSpan.textContent = `Step ${idx + 1}: ${t.name}`;
+                
+                const statusSpan = document.createElement('span');
+                statusSpan.textContent = t.status;
+                statusSpan.className = `status-badge ${t.status === 'COMPLETED' ? 'status-completed' : 'status-failed'}`;
+                
+                li.appendChild(stepSpan);
+                li.appendChild(statusSpan);
+                traceList.appendChild(li);
+            });
+
+            // Render Agent Logs
+            logsConsole.textContent = data.trace.logs.map(log => 
+                `[${log.timestamp}] [${log.step}] [${log.level}] ${log.message}`
+            ).join('\n');
+
+            // Show results container and reset active tab to 'planTab'
+            resultContainer.style.display = 'block';
+            switchTab('planTab');
+        }
+
+        function generateMarkdown(plan) {
+            let md = `# Goal Plan & Scheduled Roadmap\n\n`;
+            md += `## Goal\n${plan.goal}\n\n`;
+            
+            md += `## Schedule Timetable\n`;
+            md += `| Week | Day | Time | Session Focus |\n`;
+            md += `|---|---|---|---|\n`;
+            plan.sessions.forEach(s => {
+                md += `| Week ${s.week} | ${s.day} | ${s.time} | ${s.task} |\n`;
+            });
+            md += `\n`;
+
+            md += `## Milestones\n`;
+            plan.milestones.forEach((m, idx) => {
+                md += `${idx + 1}. ${m}\n`;
+            });
+            md += `\n`;
+
+            md += `## Tasks\n`;
+            plan.tasks.forEach(t => {
+                md += `- [ ] ${t}\n`;
+            });
+            md += `\n`;
+
+            md += `## Estimated Timeline\n${plan.timeline}\n`;
+            return md;
+        }
+    </script>
+</body>
+</html>

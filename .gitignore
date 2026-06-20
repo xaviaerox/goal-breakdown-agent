@@ -1,0 +1,27 @@
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.unittest_cache/
+
+# Environment Variables & Credentials
+.env
+credentials.json
+token.json
+
+# Logs and traces
+logs/
+*.log
+trace_*.json
+
+# OS files
+.DS_Store
+Thumbs.db
