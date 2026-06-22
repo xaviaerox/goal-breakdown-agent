@@ -181,7 +181,7 @@ def test_composed_agent_runtime_success(mock_create_events, mock_call_gemini, mo
     
     plan = result["plan"]
     assert plan["goal"] == "Learn Python"
-    assert plan["timeline"] == "4 weeks"
+    assert plan["timeline"] == "1 week"
     assert len(plan["sessions"]) == 3
     
     trace = result["trace"]

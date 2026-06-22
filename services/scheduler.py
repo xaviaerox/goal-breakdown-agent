@@ -153,8 +153,26 @@ def generate_schedule(tasks: list, availability: str, sessions_pref: str, deadli
     for input_str in [availability, sessions_pref]:
         if not input_str:
             continue
-        # Split by comma or semicolon to support multiple slots
-        parts = re.split(r"[,;]+", input_str)
+        
+        # Smart splitting: split by semicolon if present, otherwise split by comma with time-based merging
+        if ";" in input_str:
+            parts = [p.strip() for p in input_str.split(";") if p.strip()]
+        else:
+            raw_parts = [p.strip() for p in input_str.split(",") if p.strip()]
+            parts = []
+            current_part = ""
+            for p in raw_parts:
+                if current_part:
+                    current_part += ", " + p
+                else:
+                    current_part = p
+                has_time = re.search(r"\d{1,2}:\d{2}", current_part) or "morning" in current_part or "afternoon" in current_part or "evening" in current_part
+                if has_time:
+                    parts.append(current_part)
+                    current_part = ""
+            if current_part:
+                parts.append(current_part)
+
         for part in parts:
             part = part.strip()
             if part:

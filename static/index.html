@@ -353,8 +353,17 @@
 </head>
 <body>
     <div class="container">
-        <h1>Goal Planning & Execution Agent</h1>
-        <p class="subtitle">A safe, composed concierge agent that schedules work blocks and syncs them automatically via MCP.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; margin-bottom: 5px; flex-wrap: wrap; gap: 10px;">
+            <h1 style="border-bottom: none; margin-bottom: 0; padding-bottom: 0; flex: 1;">Goal Planning & Execution Agent</h1>
+            <div id="authStatusContainer">
+                <span style="color: #666; font-style: italic; font-size: 13px;">Checking auth status...</span>
+            </div>
+        </div>
+        <p class="subtitle" style="margin-top: 5px;">A safe, composed concierge agent that schedules work blocks and syncs them automatically via Google Calendar.</p>
+
+        <div id="loginWarningBanner" style="display: none; background-color: #fff9e6; border-left: 4px solid #ffb300; padding: 12px; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+            ⚠️ <strong>Modo Vista Previa:</strong> No has iniciado sesión con Google. El agente creará el plan de estudio en pantalla pero <strong>no se sincronizará</strong> en tu Google Calendar. Inicia sesión con Google arriba para habilitar la sincronización.
+        </div>
 
         <div id="errorMessage" class="error-message"></div>
 
@@ -535,6 +544,46 @@
 
         let activePlan = null;
 
+        // Authentication Status Checking
+        const authStatusContainer = document.getElementById('authStatusContainer');
+        const loginWarningBanner = document.getElementById('loginWarningBanner');
+        let isLoggedIn = false;
+
+        async function checkAuthStatus() {
+            try {
+                const res = await fetch('/api/auth/status');
+                const data = await res.json();
+                isLoggedIn = data.logged_in;
+                
+                if (isLoggedIn) {
+                    authStatusContainer.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="color: #2e7d32; font-weight: bold; display: inline-flex; align-items: center; gap: 4px;">
+                                🟢 Conectado: <strong>${data.email}</strong>
+                            </span>
+                            <a href="/auth/logout" style="background-color: #ffe6e6; color: #cc0000; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; border: 1px solid #ffcccc; font-size: 13px;">Cerrar sesión</a>
+                        </div>
+                    `;
+                    loginWarningBanner.style.display = 'none';
+                    submitBtn.textContent = 'Generate & Sync Plan';
+                } else {
+                    authStatusContainer.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="color: #666; font-size: 13px;">Sincronización desactivada</span>
+                            <a href="/auth/login" style="background-color: #4285F4; color: white; text-decoration: none; padding: 8px 14px; border-radius: 4px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 8px; font-size: 13px;">
+                                <svg width="14" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z" fill="#4285F4"/><path d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5614C11.2418 14.1014 10.2109 14.4205 9 14.4205C6.65591 14.4205 4.67182 12.8373 3.96409 10.71H0.957275V13.0418C2.43818 15.9832 5.48182 18 9 18Z" fill="#34A853"/><path d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 9C3.68182 8.40682 3.78409 7.83 3.96409 7.29V4.95818H0.957275C0.347727 6.17318 0 7.54773 0 9C0 10.4523 0.347727 11.8268 0.957275 13.0418L3.96409 10.71Z" fill="#FBBC05"/><path d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957275 4.95818L3.96409 7.29C4.67182 5.16273 6.65591 3.57955 9 3.57955Z" fill="#EA4335"/></svg>
+                                Iniciar sesión con Google
+                            </a>
+                        </div>
+                    `;
+                    loginWarningBanner.style.display = 'block';
+                    submitBtn.textContent = 'Generate Plan (View Only)';
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+            }
+        }
+
         // Character count display
         goalInput.addEventListener('input', () => {
             const length = goalInput.value.length;
@@ -670,9 +719,15 @@
                 return;
             }
             
-            // Format availability as a comma-separated string of slots
-            const availability = activeSlots.map(s => `${s.days.join(', ')} ${s.start}-${s.end}`).join(', ');
+            // Format availability as a semicolon-separated string of slots
+            const availability = activeSlots.map(s => `${s.days.join(', ')} ${s.start}-${s.end}`).join('; ');
             const sessions = ""; // Combined into availability
+
+            // Calculate timezone offset string (e.g. +02:00)
+            const tzo = -new Date().getTimezoneOffset();
+            const dif = tzo >= 0 ? '+' : '-';
+            const pad = (num) => String(Math.floor(Math.abs(num))).padStart(2, '0');
+            const timezone_offset = `${dif}${pad(tzo / 60)}:${pad(tzo % 60)}`;
 
             // Clear previous states
             errorMessage.style.display = 'none';
@@ -699,7 +754,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ goal, deadline, availability, sessions })
+                    body: JSON.stringify({ goal, deadline, availability, sessions, timezone_offset })
                 });
 
                 const result = await response.json();

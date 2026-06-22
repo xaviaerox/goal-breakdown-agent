@@ -45,7 +45,7 @@ class ExecutionTrace:
             "title": title,
             "status": status
         })
-        self.log("MCP Execution", "INFO", f"Executed simulated MCP operation: {op_type} for '{title}'. Status: {status}")
+        self.log("MCP Execution", "INFO", f"Executed real MCP operation: {op_type} for '{title}'. Status: {status}")
 
     def set_evaluation_score(self, score: int):
         self.evaluation_score = score

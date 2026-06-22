@@ -89,6 +89,8 @@ def run_evaluation():
                     else:
                         details = f"Block message mismatch. Got: {err_msg[:25]}"
                 else:
+                    import traceback
+                    traceback.print_exc()
                     details = f"Unexpected execution error: {err_msg[:35]}"
 
             if status == "PASSED":

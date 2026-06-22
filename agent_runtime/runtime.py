@@ -1,10 +1,11 @@
 import os
 import json
 import re
+import math
 from datetime import datetime, timedelta, timezone
 from security.guardrails import check_guardrails
 from services.gemini_client import is_gemini_configured, call_gemini
-from services.scheduler import generate_schedule
+from services.scheduler import generate_schedule, parse_deadline_date
 from agent_runtime.skill_loader import discover_skills
 from agent_runtime.execution_trace import ExecutionTrace
 from agent_runtime.evaluator import RuntimeEvaluator
@@ -38,7 +39,7 @@ class ComposedAgentRuntime:
         self.trace = None
         self.evaluator = RuntimeEvaluator()
 
-    def run(self, goal: str, deadline: str = "", availability: str = "", sessions_pref: str = "") -> dict:
+    def run(self, goal: str, deadline: str = "", availability: str = "", sessions_pref: str = "", timezone_offset: str = "Z", user_access_token: str = None) -> dict:
         self.trace = ExecutionTrace()
         self.trace.start()
         
@@ -111,20 +112,40 @@ class ComposedAgentRuntime:
             complexity = analysis_data.get("complexity", "medium")
             self.trace.log("Goal Analysis", "INFO", f"Analysis completed. Category: {category}, Complexity: {complexity}")
 
+            # Determine duration between reference date (2026-06-22) and deadline to enforce time budget
+            base_date = datetime(2026, 6, 22, tzinfo=timezone.utc)
+            deadline_date = parse_deadline_date(deadline)
+            if deadline_date and deadline_date >= base_date:
+                days_diff = (deadline_date - base_date).days
+                weeks_diff = max(1, math.ceil(days_diff / 7))
+                timeframe_info = f"Deadline: {deadline} ({days_diff} days / {weeks_diff} week(s) from reference start date 2026-06-22)"
+                max_tasks = min(25, max(5, weeks_diff * 5))
+                max_milestones = min(5, max(2, weeks_diff + 1))
+            else:
+                weeks_diff = 4
+                timeframe_info = "Deadline: Not specified or in the past (defaulting to a 4-week window)"
+                max_tasks = 20
+                max_milestones = 4
+
             # 4. Milestone Generation Step
             self.trace.add_skill("milestone-generator")
             milestone_skill = discovered["milestone-generator"]
-            self.trace.log("Milestone Generation", "INFO", "Invoking Gemini for Milestone Generation...")
+            self.trace.log("Milestone Generation", "INFO", f"Invoking Gemini for Milestone Generation with constraint: {timeframe_info}...")
             
             milestone_prompt = f"""
             Goal: {cleaned_goal}
             Category: {category}
             Complexity: {complexity}
+            Timeframe: {timeframe_info}
 
             Follow the instructions:
             {milestone_skill.instructions}
 
-            Generate 3 to 5 high-level milestones representing chronological progress.
+            CRITICAL TIME CONSTRAINT:
+            The milestones generated MUST be realistic and fit completely within the specified timeframe ({timeframe_info}). Do NOT plan for a longer period.
+            Because the timeframe is limited, you MUST generate at most {max_milestones} milestones in total.
+
+            Generate 2 to {max_milestones} high-level milestones representing chronological progress.
             Output your response strictly as a JSON object with this format:
             {{
               "milestones": ["Milestone 1 description", "Milestone 2 description", ...]
@@ -144,11 +165,17 @@ class ComposedAgentRuntime:
             task_prompt = f"""
             Goal: {cleaned_goal}
             Milestones: {json.dumps(milestones)}
+            Timeframe: {timeframe_info}
 
             Follow the instructions:
             {task_skill.instructions}
 
-            Create actionable prioritized weekly tasks mapping directly to these milestones.
+            CRITICAL TIME CONSTRAINT:
+            The tasks list generated MUST be designed to fit completely within the specified timeframe ({timeframe_info}). 
+            Pace the tasks so that they can be reasonably completed given this time limit.
+            Because the timeframe is limited, you MUST generate AT MOST {max_tasks} tasks in total (recommended: exactly {max_tasks} or fewer).
+
+            Create actionable prioritized tasks mapping directly to these milestones.
             Output your response strictly as a JSON object with this format:
             {{
               "tasks": ["Task 1 description", "Task 2 description", ...]
@@ -158,6 +185,9 @@ class ComposedAgentRuntime:
             task_res_text = call_gemini(task_prompt, system_instruction=task_skill.description)
             task_data = extract_json(task_res_text)
             tasks = task_data.get("tasks", [])
+            # Enforce max tasks programmatically in case LLM ignores prompt limit
+            if len(tasks) > max_tasks:
+                tasks = tasks[:max_tasks]
             self.trace.log("Task Planning", "INFO", f"Tasks planned. Count: {len(tasks)}")
 
             # 6. Session Scheduling Step
@@ -189,8 +219,15 @@ class ComposedAgentRuntime:
             
             timeline_res_text = call_gemini(timeline_prompt, system_instruction=timeline_skill.description)
             timeline_data = extract_json(timeline_res_text)
-            timeline = timeline_data.get("timeline", "4 weeks")
-            self.trace.log("Timeline Estimation", "INFO", f"Timeline estimated: {timeline}")
+            
+            # Determine actual timeline based on scheduled sessions (strictly capped by deadline)
+            if sessions:
+                max_week = max(s["week"] for s in sessions)
+                timeline = f"{max_week} week" if max_week == 1 else f"{max_week} weeks"
+            else:
+                timeline = timeline_data.get("timeline", "4 weeks")
+                
+            self.trace.log("Timeline Estimation", "INFO", f"Timeline determined: {timeline}")
 
             plan = {
                 "goal": cleaned_goal,
@@ -223,8 +260,8 @@ class ComposedAgentRuntime:
         self.trace.log("Evaluation", "INFO", "Final plan validation checks passed successfully.")
 
         # 9. MCP Execution Layer
-        self.trace.log("MCP Execution", "INFO", "Triggering local simulated MCP execution layer...")
-        self._execute_mcp_ops(plan)
+        self.trace.log("MCP Execution", "INFO", "Triggering Google Calendar sync execution layer...")
+        self._execute_mcp_ops(plan, timezone_offset, user_access_token)
         
         self.trace.stop(status="success")
         
@@ -233,10 +270,15 @@ class ComposedAgentRuntime:
             "trace": self.trace.to_dict()
         }
 
-    def _execute_mcp_ops(self, plan: dict):
+    def _execute_mcp_ops(self, plan: dict, timezone_offset: str = "Z", user_access_token: str = None):
         """
-        Executes real Google Calendar MCP operations.
+        Executes real Google Calendar operations using the user's OAuth access token.
+        If user_access_token is missing, skips the sync process (view-only mode).
         """
+        if not user_access_token:
+            self.trace.log("MCP Execution", "INFO", "[OAuth Sync] Skipping calendar synchronization (User not authenticated).")
+            return
+
         # Monday, Jun 22, 2026 is our reference date for scheduling offsets
         base_date = datetime(2026, 6, 22, tzinfo=timezone.utc)
         day_offsets = {
@@ -266,8 +308,14 @@ class ComposedAgentRuntime:
                 end_dt = target_day.replace(hour=eh, minute=em, second=0)
                 if end_dt <= start_dt:
                     end_dt = end_dt + timedelta(days=1)
-                start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-                end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                
+                # Format with custom offset instead of Z:
+                if timezone_offset == 'Z':
+                    start_iso = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    end_iso = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                else:
+                    start_iso = f"{start_dt.strftime('%Y-%m-%dT%H:%M:%S')}{timezone_offset}"
+                    end_iso = f"{end_dt.strftime('%Y-%m-%dT%H:%M:%S')}{timezone_offset}"
                 
             real_events_to_create.append({
                 "title": title,
@@ -277,23 +325,23 @@ class ComposedAgentRuntime:
             })
 
         if real_events_to_create:
-            from services.mcp_real import create_real_events
-            self.trace.log("MCP Execution", "INFO", f"[Real MCP] Syncing {len(real_events_to_create)} calendar events in batch...")
+            from services.calendar_client import create_calendar_events_direct
+            self.trace.log("MCP Execution", "INFO", f"[OAuth Sync] Syncing {len(real_events_to_create)} calendar events in batch directly...")
             try:
-                results = create_real_events(real_events_to_create)
+                results = create_calendar_events_direct(real_events_to_create, user_access_token)
                 for res in results:
                     self.trace.add_mcp_operation(
-                        op_type="create_event (Real)",
+                        op_type="create_event (OAuth)",
                         title=res["title"],
                         status=res["status"]
                     )
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()
-                self.trace.log("MCP Execution", "ERROR", f"[Real MCP] Batch sync failed: {str(e)}\n{tb}")
+                self.trace.log("MCP Execution", "ERROR", f"[OAuth Sync] Batch sync failed: {str(e)}\n{tb}")
                 for ev in real_events_to_create:
                     self.trace.add_mcp_operation(
-                        op_type="create_event (Real)",
+                        op_type="create_event (OAuth)",
                         title=ev["title"],
                         status=f"failed: {str(e)}"
                     )
