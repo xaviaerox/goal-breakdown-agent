@@ -278,6 +278,77 @@
             font-size: 13px;
             max-height: 400px;
         }
+
+        /* Availability Slots & Badges Styles */
+        .day-badge {
+            background-color: #f1f3f4;
+            border: 1px solid #dadce0;
+            color: #3c4043;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            padding: 0;
+        }
+        .day-badge.selected {
+            background-color: #0066cc !important;
+            border-color: #0066cc !important;
+            color: white !important;
+            box-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
+        }
+        .day-badge:hover {
+            border-color: #8ab4f8;
+            background-color: #f8fafd;
+        }
+        
+        .slot-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #e1e4e6;
+            font-size: 13px;
+        }
+        .slot-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slot-days {
+            font-weight: bold;
+            color: #0066cc;
+            background-color: #e6f2ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .slot-time {
+            font-family: monospace;
+            background-color: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .delete-slot-btn {
+            background-color: #c62828 !important;
+            color: white !important;
+            padding: 4px 8px !important;
+            font-size: 11px !important;
+            border-radius: 3px !important;
+            border: none !important;
+            cursor: pointer !important;
+            font-weight: normal !important;
+        }
+        .delete-slot-btn:hover {
+            background-color: #b71c1c !important;
+        }
     </style>
 </head>
 <body>
@@ -299,17 +370,46 @@
 
             <div class="form-group">
                 <label for="deadlineInput">Target Completion Date:</label>
-                <input type="text" id="deadlineInput" placeholder="e.g., September 15" value="September 15">
+                <input type="date" id="deadlineInput" value="2026-09-15">
             </div>
 
-            <div class="form-group">
-                <label for="availabilityInput">Weekly Availability Window:</label>
-                <input type="text" id="availabilityInput" placeholder="e.g., Monday-Friday 20:00-21:30" value="Monday-Friday 20:00-21:30">
-            </div>
+            <div class="form-group goal-span" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                <label style="font-size: 16px; margin-bottom: 12px; color: #1a1a1a;">Configure Availability Slots</label>
+                
+                <!-- Day badges selection -->
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #555;">1. Select Days:</span>
+                    <div id="daySelector" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="day-badge" data-day="Monday">M</button>
+                        <button type="button" class="day-badge" data-day="Tuesday">T</button>
+                        <button type="button" class="day-badge" data-day="Wednesday">W</button>
+                        <button type="button" class="day-badge" data-day="Thursday">T</button>
+                        <button type="button" class="day-badge" data-day="Friday">F</button>
+                        <button type="button" class="day-badge" data-day="Saturday" style="background-color: #f0f4f8; border-color: #c2d6ea; color: #0066cc;">S</button>
+                        <button type="button" class="day-badge" data-day="Sunday" style="background-color: #f0f4f8; border-color: #c2d6ea; color: #0066cc;">S</button>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="sessionsInput">Weekend Session Prefs:</label>
-                <input type="text" id="sessionsInput" placeholder="e.g., Saturday 10:00-12:00" value="Saturday 10:00-12:00">
+                <!-- Time inputs and Add button -->
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="font-size: 13px; font-weight: bold; color: #555;">2. Start Time:</span>
+                        <input type="time" id="newSlotStart" value="19:00" style="padding: 8px; width: 120px;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="font-size: 13px; font-weight: bold; color: #555;">3. End Time:</span>
+                        <input type="time" id="newSlotEnd" value="20:30" style="padding: 8px; width: 120px;">
+                    </div>
+                    <button type="button" id="addSlotBtn" style="padding: 9px 18px; font-size: 14px; background-color: #2e7d32; border: none;">+ Add Slot</button>
+                </div>
+
+                <!-- List of active slots -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #555;">Active Availability Slots:</span>
+                    <div id="slotsContainer" style="display: flex; flex-direction: column; gap: 8px; background-color: #fafbfc; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; min-height: 50px;">
+                        <!-- Slots list will render here dynamically -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -404,8 +504,12 @@
     <script>
         const goalInput = document.getElementById('goalInput');
         const deadlineInput = document.getElementById('deadlineInput');
-        const availabilityInput = document.getElementById('availabilityInput');
-        const sessionsInput = document.getElementById('sessionsInput');
+        
+        // Availability Slots State
+        let activeSlots = [
+            { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], start: "19:00", end: "20:30" },
+            { days: ["Saturday"], start: "10:00", end: "12:00" }
+        ];
 
         const charCount = document.getElementById('charCount');
         const submitBtn = document.getElementById('submitBtn');
@@ -462,12 +566,113 @@
             if (activeContent) activeContent.classList.add('active');
         }
 
+        // Day Selector Badge Toggling
+        const daySelector = document.getElementById('daySelector');
+        const dayBadges = daySelector.querySelectorAll('.day-badge');
+        
+        dayBadges.forEach(badge => {
+            badge.addEventListener('click', () => {
+                badge.classList.toggle('selected');
+            });
+        });
+
+        // Render Active Slots List
+        const slotsContainer = document.getElementById('slotsContainer');
+        function renderSlots() {
+            slotsContainer.innerHTML = '';
+            if (activeSlots.length === 0) {
+                slotsContainer.innerHTML = '<div style="color: #666; font-style: italic; font-size: 13px; text-align: center; padding: 10px 0;">No active slots. Please add availability slots above.</div>';
+                return;
+            }
+            
+            activeSlots.forEach((slot, index) => {
+                const row = document.createElement('div');
+                row.className = 'slot-row';
+                
+                const info = document.createElement('div');
+                info.className = 'slot-info';
+                
+                const daysBadge = document.createElement('span');
+                daysBadge.className = 'slot-days';
+                daysBadge.textContent = slot.days.join(', ');
+                
+                const timeBadge = document.createElement('span');
+                timeBadge.className = 'slot-time';
+                timeBadge.textContent = `${slot.start} - ${slot.end}`;
+                
+                info.appendChild(daysBadge);
+                info.appendChild(timeBadge);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'delete-slot-btn';
+                deleteBtn.textContent = 'Remove';
+                deleteBtn.addEventListener('click', () => {
+                    activeSlots.splice(index, 1);
+                    renderSlots();
+                });
+                
+                row.appendChild(info);
+                row.appendChild(deleteBtn);
+                slotsContainer.appendChild(row);
+            });
+        }
+
+        // Add Slot Logic
+        const addSlotBtn = document.getElementById('addSlotBtn');
+        const newSlotStart = document.getElementById('newSlotStart');
+        const newSlotEnd = document.getElementById('newSlotEnd');
+        
+        addSlotBtn.addEventListener('click', () => {
+            const selectedDays = [];
+            dayBadges.forEach(badge => {
+                if (badge.classList.contains('selected')) {
+                    selectedDays.push(badge.getAttribute('data-day'));
+                }
+            });
+            
+            if (selectedDays.length === 0) {
+                alert('Please select at least one day.');
+                return;
+            }
+            
+            const start = newSlotStart.value;
+            const end = newSlotEnd.value;
+            
+            if (!start || !end) {
+                alert('Please specify both start and end times.');
+                return;
+            }
+            
+            if (start >= end) {
+                if (!confirm('Start time is equal to or later than end time. Are you sure you want to add this slot?')) {
+                    return;
+                }
+            }
+            
+            activeSlots.push({ days: selectedDays, start, end });
+            renderSlots();
+            
+            // Reset day selections
+            dayBadges.forEach(badge => badge.classList.remove('selected'));
+        });
+
+        // Initial render
+        renderSlots();
+
         // Submit goal
         submitBtn.addEventListener('click', async () => {
             const goal = goalInput.value;
             const deadline = deadlineInput.value;
-            const availability = availabilityInput.value;
-            const sessions = sessionsInput.value;
+            
+            if (activeSlots.length === 0) {
+                showError("Please configure at least one availability slot.");
+                return;
+            }
+            
+            // Format availability as a comma-separated string of slots
+            const availability = activeSlots.map(s => `${s.days.join(', ')} ${s.start}-${s.end}`).join(', ');
+            const sessions = ""; // Combined into availability
 
             // Clear previous states
             errorMessage.style.display = 'none';
