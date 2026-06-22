@@ -52,8 +52,8 @@ def auth_login():
         return "GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing from the environment.", 500
         
     redirect_uri = request.host_url.rstrip('/') + '/auth/callback'
-    # Force HTTPS in production if behind a proxy
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https':
+    # Force HTTPS in production (non-localhost) environments
+    if 'localhost' not in request.host and '127.0.0.1' not in request.host:
         redirect_uri = redirect_uri.replace('http://', 'https://')
 
     auth_url = (
@@ -74,7 +74,8 @@ def auth_callback():
         return "Missing authorization code from Google.", 400
         
     redirect_uri = request.host_url.rstrip('/') + '/auth/callback'
-    if request.headers.get('X-Forwarded-Proto', 'http') == 'https':
+    # Force HTTPS in production (non-localhost) environments
+    if 'localhost' not in request.host and '127.0.0.1' not in request.host:
         redirect_uri = redirect_uri.replace('http://', 'https://')
         
     token_url = "https://oauth2.googleapis.com/token"
