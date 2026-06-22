@@ -33,10 +33,10 @@ def run_evaluation():
     print("-" * 80)
 
     # Mock real calendar writes during evaluations to prevent cluttering calendar and oauth blocks
-    mock_events = patch("services.mcp_real.create_real_events")
+    mock_events = patch("services.calendar_client.create_calendar_events_direct")
 
     with mock_events as mock_create:
-        mock_create.side_effect = lambda evs: [{"title": ev["title"], "status": "success", "result": "mocked"} for ev in evs]
+        mock_create.side_effect = lambda evs, token: [{"title": ev["title"], "status": "success", "result": "mocked"} for ev in evs]
         for case in test_cases:
             case_id = case["id"]
             goal = case["goal"]
@@ -53,7 +53,8 @@ def run_evaluation():
                     goal=goal,
                     deadline=deadline,
                     availability=availability,
-                    sessions_pref=sessions
+                    sessions_pref=sessions,
+                    user_access_token="mock_evaluation_token"
                 )
                 
                 if expected_type == "valid":

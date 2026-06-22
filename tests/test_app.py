@@ -149,7 +149,7 @@ def test_composed_agent_runtime_no_gemini_raises_error(mock_gemini_configured):
 
 @patch("agent_runtime.runtime.is_gemini_configured", return_value=True)
 @patch("agent_runtime.runtime.call_gemini")
-@patch("services.mcp_real.create_real_events")
+@patch("services.calendar_client.create_calendar_events_direct")
 def test_composed_agent_runtime_success(mock_create_events, mock_call_gemini, mock_gemini_configured):
     # Mock Gemini responses sequentially for the pipeline steps
     mock_call_gemini.side_effect = [
@@ -173,7 +173,8 @@ def test_composed_agent_runtime_success(mock_create_events, mock_call_gemini, mo
         goal="Learn Python",
         deadline="June 25",
         availability="Monday-Friday 20:00-21:30",
-        sessions_pref="Saturday morning"
+        sessions_pref="Saturday morning",
+        user_access_token="mock_token"
     )
     
     assert "plan" in result
@@ -188,7 +189,7 @@ def test_composed_agent_runtime_success(mock_create_events, mock_call_gemini, mo
     assert trace["status"] == "success"
     assert trace["evaluation_score"] == 100
     assert len(trace["mcp_operations"]) == 3
-    assert trace["mcp_operations"][0]["type"] == "create_event (Real)"
+    assert trace["mcp_operations"][0]["type"] == "create_event (OAuth)"
     assert trace["mcp_operations"][0]["status"] == "success"
 
 # --- Integration Tests for Flask API Routing ---
@@ -201,7 +202,7 @@ def client():
 
 @patch("agent_runtime.runtime.is_gemini_configured", return_value=True)
 @patch("agent_runtime.runtime.call_gemini")
-@patch("services.mcp_real.create_real_events")
+@patch("services.calendar_client.create_calendar_events_direct")
 def test_api_breakdown_success(mock_create_events, mock_call_gemini, mock_gemini_configured, client):
     mock_call_gemini.side_effect = [
         '{"category": "study", "complexity": "medium"}',
