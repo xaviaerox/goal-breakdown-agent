@@ -1,197 +1,209 @@
-# Goal Planning & Execution Agent (Concierge Track)
+<p align="center">
+  <img src="docs/project_banner.png" alt="The Planning Concierge Banner" width="900" style="border-radius: 8px; margin-bottom: 20px;" />
+</p>
 
-![The Planning Concierge Banner](docs/project_banner.png)
+<h1 align="center">🗓️ The Planning Concierge</h1>
 
-An intelligent, secure **Concierge Agent** designed to transform natural language goals into complete, structured plans, schedule study/work sessions aligned with user availability, and execute calendar synchronization directly via the Model Context Protocol (MCP).
+<p align="center">
+  <strong>Goal Planning & Execution Agent (Concierge Track)</strong>
+</p>
 
-Built as a capstone project for Kaggle's **5-Day AI Agents: Intensive Vibe Coding Course**, demonstrating **Agent Runtime Pipelines**, **Composable Skills**, **Real MCP Servers**, **Security Guardrails**, **Evaluation Frameworks**, **google-genai SDK Migration**, and production deployment on **Google Cloud Run** using a **Headless OAuth Token Seeding** mechanism.
+<p align="center">
+  <img src="https://img.shields.io/badge/Gemini%202.5-Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini 2.5 Flash" />
+  <img src="https://img.shields.io/badge/Google%20Calendar-API-EA4335?style=for-the-badge&logo=google-calendar&logoColor=white" alt="Google Calendar API" />
+  <img src="https://img.shields.io/badge/Google%20Cloud-Run-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="Google Cloud Run" />
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+" />
+  <img src="https://img.shields.io/badge/Evaluation-100%25%20Passed-34A853?style=for-the-badge&logo=pytest&logoColor=white" alt="Evaluation 100% Passed" />
+  <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="MIT License" />
+</p>
 
-🚀 **Production Web App URL**: [https://goal-breakdown-agent-61703236417.us-central1.run.app/](https://goal-breakdown-agent-61703236417.us-central1.run.app/)
+<p align="center">
+  An intelligent, secure <strong>Concierge Agent</strong> designed to transform natural language goals into complete, structured plans, schedule study/work sessions aligned with user availability, and execute calendar synchronization directly via the Model Context Protocol (MCP) and Google APIs.
+</p>
 
----
-
-## 1. Problem Statement
-Achieving personal and professional goals is often hindered by:
-- **Planning Complexity**: Decomposing a large target (like *Pass Cisco CyberOps Associate*) into chronologically ordered milestones requires high cognitive effort.
-- **Scheduling Friction**: Converting task checklists into specific study calendar blocks matching daily availability is tedious.
-- **Execution Gap**: Plans generated in isolation are rarely executed; they must be directly integrated into the user's daily tools (like Google Calendar) to drive action.
-- **Deployment & Latency**: Running agents locally limits access, but deploying them to the cloud often crashes due to headless environment restrictions (like browser-based OAuth flows).
-
----
-
-## 2. Solution: The Planning Concierge
-Our agent acts as a secure personal concierge:
-1. **Inputs**: Takes a goal, target deadline, weekly availability windows, and session preferences.
-2. **Decomposes & Schedules**: Dynamically triggers specialized skills to analyze goals, create milestones, plan tasks, and allocate sessions.
-3. **Executes**: Programmatically syncs study blocks directly to the user's **Google Calendar** using secure, multi-tenant Google OAuth 2.0 authentication, ensuring they are scheduled before the user-defined deadline.
-4. **Cloud Ready**: Operates on Google Cloud Run with OAuth redirects and automatic token refresh, allowing any public user to authenticate and sync.
-
----
-
-## 3. Key Course Concepts Applied (5 Implemented)
-
-This capstone project implements and showcases several core agent technologies covered in the course:
-
-### A. Composed Agent Pipeline (Skills Discovery)
-Rather than a single prompt monolithic model call, the agent coordinator dynamically discovers and chains independent **Composable Skills** (located under `skills/`). This allows modular prompt engineering, isolated testing of skills, and deterministic scoring.
-
-### B. Production Google API Integration
-The agent connects directly to the **Google Calendar API** to batch-create real calendar events dynamically mapped to the calculated study dates, adjusting for timezones and localOffsets.
-
-### C. Security Guardrails & Safety
-To protect against prompt injection and harmful actions, the coordinator runs inputs through a validation engine *before* invoking any LLM, logging rejections to a local audit trail.
-
-### D. google-genai SDK Migration
-The system is built on the official, modern `google-genai` Python library, using client-instantiated generative models (`client.models.generate_content`) and structured `types.GenerateContentConfig` objects.
-
-### E. Cloud Deployability & Multi-Tenant OAuth 2.0
-The backend is dockerized and deployed to **Google Cloud Run**. To support secure, multi-tenant user authentication in production, we implemented standard Google OAuth 2.0. Users log in securely with their own Google Account, authorizing the app to manage only their calendar events, with session-stored access tokens refreshed automatically in the background.
+<p align="center">
+  <a href="https://goal-breakdown-agent-61703236417.us-central1.run.app/"><strong>🚀 Probar Demo en Vivo</strong></a> • 
+  <a href="docs/presentation_script.MD"><strong>🎬 Guión de Presentación</strong></a> • 
+  <a href="docs/"><strong>📂 Diapositivas y Materiales</strong></a> • 
+  <a href="tests/"><strong>🧪 Pruebas Unitarias</strong></a> • 
+  <a href="evaluation/"><strong>📊 Suite de Evaluación</strong></a>
+</p>
 
 ---
 
-## 4. Architecture
+## 🎯 Resumen Ejecutivo: Problema y Solución
 
+<table width="100%">
+  <tr>
+    <td width="55%" valign="top">
+      <h3>❌ El Vacío de Ejecución</h3>
+      <p>
+        Lograr metas personales o de certificación (como <i>"Aprender Python"</i> o <i>"Certificación Cisco CyberOps"</i>) suele fallar debido al esfuerzo cognitivo necesario para planificar.
+      </p>
+      <ul>
+        <li><strong>Complejidad</strong>: Descomponer un objetivo grande en hitos cronológicos es difícil.</li>
+        <li><strong>Fricción de Horarios</strong>: Asignar tareas a bloques de estudio específicos en el día a día es tedioso.</li>
+        <li><strong>Falta de Integración</strong>: Las listas de tareas aisladas rara vez se ejecutan si no están integradas en nuestras herramientas cotidianas (como Google Calendar).</li>
+      </ul>
+    </td>
+    <td width="45%" valign="top">
+      <h3>✨ La Solución Concierge</h3>
+      <p>
+        <strong>The Planning Concierge</strong> cierra esta brecha automatizando todo el ciclo:
+      </p>
+      <ol>
+        <li><strong>Entrada Natural</strong>: Recibe metas, fecha límite y horarios de disponibilidad semanal.</li>
+        <li><strong>Descomposición en Cascada</strong>: Descubre y ejecuta habilidades (<i>skills</i>) especializadas para estructurar el plan.</li>
+        <li><strong>Sincronización Inteligente</strong>: Agenda automáticamente bloques en tu <strong>Google Calendar</strong> respetando zonas horarias, sin solapamientos.</li>
+        <li><strong>Seguridad Multi-Tenant</strong>: Autenticación OAuth 2.0 segura y temporal para producción.</li>
+      </ol>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🏗️ Arquitectura del Agente
+
+El sistema utiliza un orquestador que gestiona la entrada del usuario, la valida contra **guardarraíles de seguridad**, carga de manera dinámica los **skills independientes** (en `skills/`), genera el plan óptimo y escribe en el calendario usando la API directa con credenciales OAuth.
+
+```mermaid
+flowchart TD
+    User["👤 Usuario (Input: Meta, Disponibilidad, Deadline)"] --> WebFront["💻 Interfaz Web (Flask / Static HTML)"]
+    WebFront --> Guardrails{"🔒 Guardarraíles de Seguridad"}
+    
+    Guardrails -- "Rechazado (Inyección / >1000 char)" --> LogBlock["📁 Logs/rejected_requests.log (Bloqueo)"]
+    Guardrails -- "Aprobado (Entrada Válida)" --> Coordinator["⚙️ Agent Runtime Coordinator"]
+    
+    subgraph Pipeline ["Tubería de Skills (Composición Modular)"]
+        Coordinator --> Skill1["1️⃣ Goal Analysis (Gemini 2.5 Flash)"]
+        Skill1 --> Skill2["2️⃣ Milestone Generator (Gemini 2.5 Flash)"]
+        Skill2 --> Skill3["3️⃣ Task Planner (Gemini 2.5 Flash)"]
+        Skill3 --> Skill4["4️⃣ Session Scheduler (Motor de Calendario Local)"]
+        Skill4 --> Skill5["5️⃣ Timeline Estimator (Gemini 2.5 Flash)"]
+        Skill5 --> Skill6["6️⃣ Quality Evaluation (Validador de Trazas)"]
+    end
+    
+    Pipeline --> OAuth["🔑 Google OAuth 2.0 Layer"]
+    OAuth --> Sync["📅 Google Calendar API (Sincronización Directa)"]
 ```
-User Input (Goal, Deadline, Availability, Prefs)
-      │
-      ▼
-[Security Guardrails]  ──(Violated)──► [Block & Log to logs/rejected_requests.log]
-      │
-      ▼ (Valid)
-[Agent Runtime Coordinator] ◄──(Skill Discovery scans skills/ directory)
-      │
-      ├── 1. Execute Skill [goal-analysis]      ──► Gemini 2.5 Flash
-      ├── 2. Execute Skill [milestone-generator] ──► Gemini 2.5 Flash
-      ├── 3. Execute Skill [task-planner]        ──► Gemini 2.5 Flash
-      ├── 4. Execute Skill [session-scheduler]   ──► Local Scheduler Engine (Midnight Rollover Fix)
-      ├── 5. Execute Skill [timeline-estimator]  ──► Gemini 2.5 Flash
-      └── 6. Execute Skill [evaluation]          ──► Local RuntimeEvaluator (Scoring)
-      │
-      ▼
-[Google OAuth 2.0 Layer] ──► User log in / consent (redirects to /oauth2callback)
-                         ──► Saves encrypted token in Flask Session
-                         ──► Batch-creates events directly on user's Primary Calendar
+
+---
+
+## ⚡ Conceptos Clave del Curso Implementados
+
+Este proyecto de Capstone demuestra la aplicación de **5 tecnologías y arquitecturas clave** impartidas en el curso de Vibe Coding:
+
+### A. Tubería de Agente Componible (*Composed Agent*)
+En lugar de una llamada masiva monolítica a un LLM, el coordinador escanea la carpeta [skills/](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/skills) y ejecuta dinámicamente un pipeline estructurado en 6 pasos para obtener un resultado determinista y evaluable.
+
+### B. Integración Directa con la API de Google
+El agente interactúa de forma directa con la **API de Google Calendar** para insertar y agrupar los bloques de estudio, abstrayendo la complejidad de zonas horarias y offsets.
+
+### C. Guardarraíles de Seguridad y Auditoría
+Un módulo dedicado de seguridad ([guardrails.py](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/security/guardrails.py)) limpia las entradas y evita ataques de inyección de prompts, malware o entradas excesivamente largas antes de consumir tokens de LLM.
+
+### D. Migración de SDK a `google-genai`
+El código utiliza exclusivamente el nuevo cliente unificado oficial de Google (`google-genai`) y la sintaxis estructurada recomendada en la especificación más reciente.
+
+### E. Despliegue Multi-Inquilino (*Multi-Tenant OAuth*)
+Diseñado como un servicio SaaS real alojado en **Google Cloud Run**. Permite el login seguro y dinámico de cualquier usuario a través del consentimiento oficial de Google, almacenando de forma segura los tokens temporales de acceso en la sesión encriptada de Flask.
+
+---
+
+## 🛠️ Habilidades Modulares (Skills)
+
+Ubicadas en la carpeta `skills/`, cada una tiene su propio archivo markdown de instrucciones:
+
+| Habilidad (Skill) | Directorio | Descripción / Gatillador |
+| :--- | :--- | :--- |
+| **Goal Analysis** | `skills/goal-analysis` | Extrae y analiza los parámetros clave de la meta y restricciones. |
+| **Milestone Generator** | `skills/milestone-generator` | Divide el objetivo general en hitos y fases progresivas de aprendizaje. |
+| **Task Planner** | `skills/task-planner` | Diseña tareas de estudio detalladas y accionables para cada hito. |
+| **Session Scheduler** | `skills/session-scheduler` | Distribuye cronológicamente las horas de estudio semanales sin solapamientos. |
+| **Timeline Estimator** | `skills/timeline-estimator` | Calcula el ritmo de trabajo y estima la fecha final de cumplimiento. |
+| **Evaluation Suite** | `skills/evaluation` | Autoevalúa la coherencia del plan generado frente a las directrices de calidad. |
+
+---
+
+## 🧪 Pruebas y Evaluación Automatizada
+
+> [!NOTE]
+> Para garantizar la máxima fiabilidad, el agente cuenta con una suite completa de pruebas unitarias y de integración que se ejecutan automáticamente.
+
+* **Pruebas Unitarias (`pytest`)**: Prueban las rutas web, guardarraíles y la lógica del calendario utilizando mocks.
+  ```bash
+  pytest tests/test_app.py
+  ```
+* **Marco de Evaluación (`run_evaluation.py`)**: Evalúa el rendimiento del agente frente a 9 casos de prueba diversos (metas complejas, intentos de inyección y solicitudes peligrosas), asignando una puntuación basada en la calidad de las trazas del plan.
+  ```bash
+  python evaluation/run_evaluation.py
+  ```
+  * **Resultado de la Evaluación**: **100% de éxito (9/9 Pasados)**. Los reportes detallados se guardan en `logs/evaluation_report.json`.
+
+---
+
+## 🚀 Guía de Instalación y Despliegue Local
+
+### Requisitos Previos
+* **Python 3.10 o superior** instalado.
+* Credenciales de Cliente OAuth 2.0 y proyecto configurado en **Google Cloud Console** con la *Google Calendar API* y *Google People API* habilitadas.
+
+### Configuración del Entorno
+Crea un archivo `.env` en la raíz del proyecto:
+```env
+# Clave API de Gemini
+GEMINI_API_KEY=tu_clave_api_gemini
+
+# Credenciales de Google OAuth
+GOOGLE_CLIENT_ID=tu_cliente_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=tu_secreto_cliente
 ```
 
-- **Runtime coordinator**: Found in [agent_runtime/runtime.py](agent_runtime/runtime.py), it coordinates the 9-step pipeline.
-- **Skill Loader**: Found in [agent_runtime/skill_loader.py](agent_runtime/skill_loader.py), it dynamically parses metadata and instructions.
-- **Direct Calendar Client**: Found in [services/calendar_client.py](services/calendar_client.py), connects securely to the Google Calendar REST API using the user's OAuth access token.
-- **Scheduling Engine**: Found in [services/scheduler.py](services/scheduler.py), parses deadlines and distributes tasks sequentially (avoiding overlapping hours and handling midnight rollover).
-
----
-
-## 5. Agent Skills
-
-Decoupled specialized skills located under `skills/`:
-
-| Skill | Directory | Description / Trigger |
-|---|---|---|
-| **Goal Analysis** | `skills/goal-analysis` | Analyze raw goal input, target deadline, availability, and session preferences |
-| **Milestone Generator** | `skills/milestone-generator` | Generate high-level phases or milestones based on analyzed goal |
-| **Task Planner** | `skills/task-planner` | Plan weekly or progressive actionable tasks for each milestone |
-| **Session Scheduler** | `skills/session-scheduler` | Schedule specific time blocks and sessions based on user availability and deadline |
-| **Timeline Estimator** | `skills/timeline-estimator` | Estimate overall timeline, weekly pacing, and date alignment |
-| **Evaluation** | `skills/evaluation` | Evaluate and validate the structured plan, weekly tasks, calendar sessions, and pacing |
-
----
-
-## 6. Security and Guardrails
-
-Located in [security/guardrails.py](security/guardrails.py), the guardrails protect against malicious inputs before they reach the LLM:
-1. **Emptiness Check**: Blocks empty or whitespace-only inputs.
-2. **Length Guard**: Blocks goals exceeding 1000 characters.
-3. **Prompt Injection Guard**: Detects override templates (e.g. *"ignore previous instructions"*).
-4. **Harmful Instruction Guard**: Screen for malicious intents (e.g. *"malware"*, *"hack"*).
-
-Blocked requests are logged in `logs/rejected_requests.log`.
-
----
-
-## 7. Evaluation Framework
-
-To automate testing and scoring, we built an executable evaluation suite:
-- **`evaluation/test_cases.json`**: Lists 9 test scenarios (valid planning, prompt injection, harmful content).
-- **`evaluation/run_evaluation.py`**: Executes the test cases, validates plan structure (milestones, tasks, sessions, timeline, and MCP actions), checks guardrail assertions, and generates `logs/evaluation_report.json` with an evaluation score.
-- **Score**: **100% Success (9/9 Passed)**.
-- *Note: In evaluation runs, the calendar creation is mocked dynamically to prevent cluttering your live Google Calendar.*
-
----
-
-## 8. Setup & Installation Instructions
-
-### Prerequisites
-- Python 3.10+ installed.
-- A Google Cloud Project with the **Google Calendar API** and **Google People API** enabled.
-- OAuth 2.0 Client credentials created in your Google Cloud Console.
-
-### Environment Configuration
-1. Create a `.env` file in the project root:
-   ```bash
-   # Gemini API Key
-   GEMINI_API_KEY=your_gemini_api_key
-   
-   # Google OAuth Credentials
-   GOOGLE_CLIENT_ID=your_oauth_client_id.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=your_oauth_client_secret
-   ```
-
-### Running Locally
-1. Initialize virtual environment and install dependencies:
+### Ejecutar la Aplicación
+1. Inicializa y activa tu entorno virtual:
    ```bash
    python -m venv .venv
-   .venv\Scripts\activate      # On Windows
-   # source .venv/bin/activate  # On Linux/macOS
+   .venv\Scripts\activate      # En Windows
+   # source .venv/bin/activate  # En Linux/macOS
+   ```
+2. Instala las dependencias necesarias:
+   ```bash
    pip install -r requirements.txt
    ```
-2. Run the application:
+3. Lanza el servidor Flask:
    ```bash
    python app.py
    ```
-3. Open your browser and visit `http://localhost:5000`. Click the **"Iniciar sesión con Google"** button to log in.
-
-### Running Tests & Evaluation
-To run the automated pytest test suite:
-```bash
-pytest tests/test_app.py
-```
-
-To run the agent evaluation pipeline:
-```bash
-python evaluation/run_evaluation.py
-```
+4. Visita `http://localhost:5000` en tu navegador, haz clic en **"Iniciar sesión con Google"** y prueba tu agente.
 
 ---
 
-## 9. Google Cloud Run Deployment
+## ☁️ Despliegue en Google Cloud Run
 
-To deploy the entire application to Google Cloud Run, execute the following commands in PowerShell from the project root:
+Para subir el proyecto a producción en Cloud Run, utiliza PowerShell desde la carpeta raíz:
 
-1. **Authenticate and configure project**:
+1. **Configura tu cuenta de Google Cloud**:
    ```powershell
    gcloud.cmd auth login
    gcloud.cmd config set project gen-lang-client-0316055858
    ```
-2. **Enable required services**:
+2. **Habilita los servicios necesarios**:
    ```powershell
    gcloud.cmd services enable run.googleapis.com build.googleapis.com artifactregistry.googleapis.com
    ```
-3. **Deploy**:
+3. **Despliega la aplicación**:
    ```powershell
    gcloud.cmd run deploy goal-breakdown-agent --source . --region us-central1 --allow-unauthenticated
    ```
-4. **Configure Environment Variables**:
-   In the Google Cloud Run Console for `goal-breakdown-agent`, add the following environment variables (or let them load from the deployed `.env` file):
-   - `GEMINI_API_KEY`
-   - `GOOGLE_CLIENT_ID`
-   - `GOOGLE_CLIENT_SECRET`
-   - `GOOGLE_TOKEN_JSON`: Paste the JSON content of your locally authenticated `~/.google-workspace-mcp/token.json` file to support headless OAuth bypass.
+4. **Variables de Entorno**: Configura `GEMINI_API_KEY`, `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en la consola de Cloud Run para tu servicio.
 
 ---
 
-## 10. Presentation & Deliverables
+## 🎬 Entregables y Presentación
 
-All presentation materials are located in the [docs/](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs) folder:
+Todos los archivos relativos a la presentación del proyecto Capstone se encuentran consolidados en la carpeta [docs/](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs):
 
-- **Presentation Slides (PowerPoint)**: [The_Planning_Concierge.pptx](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pptx)
-- **Presentation Slides (PDF format)**: [The_Planning_Concierge.pdf](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pdf)
-- **Video Presentation Script (in Spanish)**: [presentation_script.MD](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/presentation_script.MD)
+* **Diapositivas en PowerPoint**: [The_Planning_Concierge.pptx](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pptx)
+* **Diapositivas en formato PDF**: [The_Planning_Concierge.pdf](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pdf)
+* **Guión Expositivo (Español, máx. 5 min)**: [presentation_script.MD](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/presentation_script.MD)
