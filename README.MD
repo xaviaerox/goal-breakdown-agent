@@ -1,5 +1,7 @@
 # Goal Planning & Execution Agent (Concierge Track)
 
+![The Planning Concierge Banner](docs/project_banner.png)
+
 An intelligent, secure **Concierge Agent** designed to transform natural language goals into complete, structured plans, schedule study/work sessions aligned with user availability, and execute calendar synchronization directly via the Model Context Protocol (MCP).
 
 Built as a capstone project for Kaggle's **5-Day AI Agents: Intensive Vibe Coding Course**, demonstrating **Agent Runtime Pipelines**, **Composable Skills**, **Real MCP Servers**, **Security Guardrails**, **Evaluation Frameworks**, **google-genai SDK Migration**, and production deployment on **Google Cloud Run** using a **Headless OAuth Token Seeding** mechanism.
