@@ -21,8 +21,8 @@ Achieving personal and professional goals is often hindered by:
 Our agent acts as a secure personal concierge:
 1. **Inputs**: Takes a goal, target deadline, weekly availability windows, and session preferences.
 2. **Decomposes & Schedules**: Dynamically triggers specialized skills to analyze goals, create milestones, plan tasks, and allocate sessions.
-3. **Executes**: Programmatically syncs study blocks directly to the user's **Google Calendar** using the Model Context Protocol (MCP), ensuring they are scheduled before the user-defined deadline.
-4. **Cloud Ready**: Operates on Google Cloud Run with instant MCP server startup using pre-compiled npm packages and environment-injected OAuth credentials.
+3. **Executes**: Programmatically syncs study blocks directly to the user's **Google Calendar** using secure, multi-tenant Google OAuth 2.0 authentication, ensuring they are scheduled before the user-defined deadline.
+4. **Cloud Ready**: Operates on Google Cloud Run with OAuth redirects and automatic token refresh, allowing any public user to authenticate and sync.
 
 ---
 
@@ -33,8 +33,8 @@ This capstone project implements and showcases several core agent technologies c
 ### A. Composed Agent Pipeline (Skills Discovery)
 Rather than a single prompt monolithic model call, the agent coordinator dynamically discovers and chains independent **Composable Skills** (located under `skills/`). This allows modular prompt engineering, isolated testing of skills, and deterministic scoring.
 
-### B. Production MCP Server Integration
-The agent interacts with the real-world **Google Workspace MCP Server** (`@alanxchen/google-workspace-mcp`) via a stdio transport client. It batch-creates real calendar events dynamically mapped to the calculated study dates.
+### B. Production Google API Integration
+The agent connects directly to the **Google Calendar API** to batch-create real calendar events dynamically mapped to the calculated study dates, adjusting for timezones and localOffsets.
 
 ### C. Security Guardrails & Safety
 To protect against prompt injection and harmful actions, the coordinator runs inputs through a validation engine *before* invoking any LLM, logging rejections to a local audit trail.
@@ -42,8 +42,8 @@ To protect against prompt injection and harmful actions, the coordinator runs in
 ### D. google-genai SDK Migration
 The system is built on the official, modern `google-genai` Python library, using client-instantiated generative models (`client.models.generate_content`) and structured `types.GenerateContentConfig` objects.
 
-### E. Cloud Deployability & Headless OAuth Seeding
-The backend is dockerized and deployed to **Google Cloud Run**. To bypass browser-based OAuth prompts in headless server environments, the system implements a **Token Seeding** mechanism: it reads a serialized `GOOGLE_TOKEN_JSON` environment variable on startup to instantiate a pre-authenticated session.
+### E. Cloud Deployability & Multi-Tenant OAuth 2.0
+The backend is dockerized and deployed to **Google Cloud Run**. To support secure, multi-tenant user authentication in production, we implemented standard Google OAuth 2.0. Users log in securely with their own Google Account, authorizing the app to manage only their calendar events, with session-stored access tokens refreshed automatically in the background.
 
 ---
 
@@ -66,14 +66,14 @@ User Input (Goal, Deadline, Availability, Prefs)
       └── 6. Execute Skill [evaluation]          ──► Local RuntimeEvaluator (Scoring)
       │
       ▼
-[MCP Execution Layer] ──► npx --no-install @alanxchen/google-workspace-mcp (Pre-installed)
-                      ──► (Reads GOOGLE_TOKEN_JSON from Environment Variables)
-                      ──► Batch-creates Google Calendar events (No browser prompt)
+[Google OAuth 2.0 Layer] ──► User log in / consent (redirects to /oauth2callback)
+                         ──► Saves encrypted token in Flask Session
+                         ──► Batch-creates events directly on user's Primary Calendar
 ```
 
 - **Runtime coordinator**: Found in [agent_runtime/runtime.py](agent_runtime/runtime.py), it coordinates the 9-step pipeline.
 - **Skill Loader**: Found in [agent_runtime/skill_loader.py](agent_runtime/skill_loader.py), it dynamically parses metadata and instructions.
-- **Real MCP Integration**: Found in [services/mcp_real.py](services/mcp_real.py), connects securely to the Google Workspace MCP server using Python's MCP SDK.
+- **Direct Calendar Client**: Found in [services/calendar_client.py](services/calendar_client.py), connects securely to the Google Calendar REST API using the user's OAuth access token.
 - **Scheduling Engine**: Found in [services/scheduler.py](services/scheduler.py), parses deadlines and distributes tasks sequentially (avoiding overlapping hours and handling midnight rollover).
 
 ---
@@ -119,19 +119,19 @@ To automate testing and scoring, we built an executable evaluation suite:
 
 ### Prerequisites
 - Python 3.10+ installed.
-- Node.js (for running `@alanxchen/google-workspace-mcp` via `npx`).
-- A Google Cloud Project with the **Google Calendar API** enabled.
-- OAuth 2.0 Client credentials downloaded from your Google Cloud Console.
+- A Google Cloud Project with the **Google Calendar API** and **Google People API** enabled.
+- OAuth 2.0 Client credentials created in your Google Cloud Console.
 
 ### Environment Configuration
-1. Copy `.env.example` to `.env`:
+1. Create a `.env` file in the project root:
    ```bash
-   cp .env.example .env
+   # Gemini API Key
+   GEMINI_API_KEY=your_gemini_api_key
+   
+   # Google OAuth Credentials
+   GOOGLE_CLIENT_ID=your_oauth_client_id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your_oauth_client_secret
    ```
-2. Fill in the environment variables in `.env`:
-   - `GEMINI_API_KEY`: Your Google Gemini API Key.
-   - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID.
-   - `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret.
 
 ### Running Locally
 1. Initialize virtual environment and install dependencies:
@@ -145,7 +145,7 @@ To automate testing and scoring, we built an executable evaluation suite:
    ```bash
    python app.py
    ```
-3. Open your browser and visit `http://localhost:5000`. On your first plan generation, the browser will open a Google authentication screen asking you to grant calendar permissions to the application.
+3. Open your browser and visit `http://localhost:5000`. Click the **"Iniciar sesión con Google"** button to log in.
 
 ### Running Tests & Evaluation
 To run the automated pytest test suite:
@@ -178,7 +178,7 @@ To deploy the entire application to Google Cloud Run, execute the following comm
    gcloud.cmd run deploy goal-breakdown-agent --source . --region us-central1 --allow-unauthenticated
    ```
 4. **Configure Environment Variables**:
-   In the Google Cloud Run Console for `goal-breakdown-agent`, add the following environment variables:
+   In the Google Cloud Run Console for `goal-breakdown-agent`, add the following environment variables (or let them load from the deployed `.env` file):
    - `GEMINI_API_KEY`
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`

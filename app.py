@@ -51,7 +51,7 @@ def auth_login():
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         return "GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing from the environment.", 500
         
-    redirect_uri = request.host_url.rstrip('/') + '/auth/callback'
+    redirect_uri = request.host_url.rstrip('/') + '/oauth2callback'
     # Force HTTPS in production (non-localhost) environments
     if 'localhost' not in request.host and '127.0.0.1' not in request.host:
         redirect_uri = redirect_uri.replace('http://', 'https://')
@@ -67,13 +67,13 @@ def auth_login():
     )
     return redirect(auth_url)
 
-@app.route('/auth/callback')
+@app.route('/oauth2callback')
 def auth_callback():
     code = request.args.get('code')
     if not code:
         return "Missing authorization code from Google.", 400
         
-    redirect_uri = request.host_url.rstrip('/') + '/auth/callback'
+    redirect_uri = request.host_url.rstrip('/') + '/oauth2callback'
     # Force HTTPS in production (non-localhost) environments
     if 'localhost' not in request.host and '127.0.0.1' not in request.host:
         redirect_uri = redirect_uri.replace('http://', 'https://')
