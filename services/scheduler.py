@@ -57,6 +57,79 @@ def parse_deadline_date(deadline_str: str, default_year: int = 2026) -> datetime
             
     return None
 
+def parse_slot(slot_str: str) -> tuple:
+    """
+    Parses a single slot string (e.g. 'Monday-Friday 20:00-21:30' or 'Saturday 10:00-12:00').
+    Returns a tuple: (list of days in lowercase, start_min, end_min)
+    """
+    slot_str = slot_str.lower().strip()
+    if not slot_str:
+        return [], 0, 0
+        
+    days = []
+    weekdays_full = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    weekdays_short = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    
+    # 1. Parse days
+    # Check for a range (e.g. monday-friday, mon-fri)
+    range_match = re.search(
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\s*-\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\b",
+        slot_str
+    )
+    if range_match:
+        start_day_str, end_day_str = range_match.groups()
+        
+        def get_full_day(d):
+            if d in weekdays_full:
+                return d
+            idx = weekdays_short.index(d)
+            return weekdays_full[idx]
+            
+        start_day = get_full_day(start_day_str)
+        end_day = get_full_day(end_day_str)
+        
+        start_idx = weekdays_full.index(start_day)
+        end_idx = weekdays_full.index(end_day)
+        
+        if start_idx <= end_idx:
+            days = weekdays_full[start_idx : end_idx + 1]
+        else:
+            # e.g. Friday-Monday (wrap around)
+            days = weekdays_full[start_idx:] + weekdays_full[:end_idx + 1]
+    else:
+        # Just check for individual day names
+        for idx, day_full in enumerate(weekdays_full):
+            day_short = weekdays_short[idx]
+            if re.search(r"\b" + day_full + r"\b", slot_str) or re.search(r"\b" + day_short + r"\b", slot_str):
+                days.append(day_full)
+                
+    # If no day was matched, check if "weekend" or "weekdays" is present
+    if not days:
+        if "weekend" in slot_str:
+            days = ["saturday", "sunday"]
+        elif "weekday" in slot_str:
+            days = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+            
+    # 2. Parse time range
+    time_match = re.search(r"(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})", slot_str)
+    if time_match:
+        sh, sm, eh, em = map(int, time_match.groups())
+        start_min = sh * 60 + sm
+        end_min = eh * 60 + em
+    else:
+        # Default start and end based on keywords
+        if "afternoon" in slot_str:
+            start_min = 14 * 60
+            end_min = 16 * 60
+        elif "morning" in slot_str:
+            start_min = 10 * 60
+            end_min = 12 * 60
+        else:
+            start_min = 19 * 60
+            end_min = 20 * 60 + 30  # 19:00 - 20:30
+        
+    return days, start_min, end_min
+
 def generate_schedule(tasks: list, availability: str, sessions_pref: str, deadline: str = None) -> list:
     """
     Distributes the given list of tasks across availability windows to generate
@@ -75,59 +148,43 @@ def generate_schedule(tasks: list, availability: str, sessions_pref: str, deadli
     # Monday, Jun 22, 2026 is our reference date for scheduling offsets
     base_date = datetime(2026, 6, 22, tzinfo=timezone.utc)
 
-    # 1. Parse availability to find available days of the week (lowercase list)
-    avail_lower = availability.lower()
-    days_to_schedule = []
-    
-    if "monday-friday" in avail_lower or "mon-fri" in avail_lower:
-        days_to_schedule.extend(["monday", "tuesday", "wednesday", "thursday", "friday"])
-    else:
-        if "monday" in avail_lower or "mon" in avail_lower:
-            days_to_schedule.append("monday")
-        if "tuesday" in avail_lower or "tue" in avail_lower:
-            days_to_schedule.append("tuesday")
-        if "wednesday" in avail_lower or "wed" in avail_lower:
-            days_to_schedule.append("wednesday")
-        if "thursday" in avail_lower or "thu" in avail_lower:
-            days_to_schedule.append("thursday")
-        if "friday" in avail_lower or "fri" in avail_lower:
-            days_to_schedule.append("friday")
+    # 1. Parse availability and sessions_pref into structured slots
+    slots = []
+    for input_str in [availability, sessions_pref]:
+        if not input_str:
+            continue
+        # Split by comma or semicolon to support multiple slots
+        parts = re.split(r"[,;]+", input_str)
+        for part in parts:
+            part = part.strip()
+            if part:
+                days, start_min, end_min = parse_slot(part)
+                if days:
+                    slots.append({
+                        "days": days,
+                        "start_min": start_min,
+                        "end_min": end_min
+                    })
 
-    if "saturday" in avail_lower or "sat" in avail_lower:
-        days_to_schedule.append("saturday")
-    if "sunday" in avail_lower or "sun" in avail_lower:
-        days_to_schedule.append("sunday")
+    # Fallback to default slots if none could be parsed
+    if not slots:
+        slots.append({
+            "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+            "start_min": 19 * 60,
+            "end_min": 20 * 60 + 30
+        })
+        slots.append({
+            "days": ["saturday"],
+            "start_min": 10 * 60,
+            "end_min": 12 * 60
+        })
 
-    if not days_to_schedule:
-        days_to_schedule = ["monday", "wednesday", "friday", "saturday"]
+    # Collect all day names that have availability
+    all_avail_days = set()
+    for s in slots:
+        all_avail_days.update(s["days"])
 
-    # 2. Parse time window from availability
-    default_start, default_end = "19:00", "20:30"
-    time_match = re.search(r"(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})", availability)
-    if time_match:
-        sh, sm, eh, em = map(int, time_match.groups())
-        start_min = sh * 60 + sm
-        end_min = eh * 60 + em
-        duration = end_min - start_min
-    else:
-        sh, sm = map(int, default_start.split(":"))
-        eh, em = map(int, default_end.split(":"))
-        start_min = sh * 60 + sm
-        duration = 90  # 1.5 hours
-
-    # Parse weekend time preference if weekend days are used
-    pref_time_match = re.search(r"(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})", sessions_pref)
-    if pref_time_match:
-        psh, psm, peh, pem = map(int, pref_time_match.groups())
-        pref_start_min = psh * 60 + psm
-        pref_duration = (peh * 60 + pem) - pref_start_min
-    else:
-        pref_start_min = 10 * 60  # 10:00 morning default
-        if "afternoon" in sessions_pref.lower():
-            pref_start_min = 14 * 60  # 14:00 afternoon
-        pref_duration = 120  # 2 hours default
-
-    # 3. Determine target dates based on deadline
+    # 2. Determine target dates based on deadline
     deadline_date = parse_deadline_date(deadline)
     
     # Generate list of allowed dates
@@ -137,47 +194,62 @@ def generate_schedule(tasks: list, availability: str, sessions_pref: str, deadli
         for d in range(max_days + 1):
             curr_date = base_date + timedelta(days=d)
             day_name = curr_date.strftime("%A").lower()
-            if day_name in days_to_schedule:
+            if day_name in all_avail_days:
                 allowed_dates.append(curr_date)
     
-    # If no allowed dates found (e.g. deadline is missing or too early), fallback to default weeks
+    # Fallback to a default 4-week window if no dates are allowed (e.g. deadline missing or past)
     if not allowed_dates:
-        # Default fallback: generate 4 weeks of allowed weekdays
-        for w in range(4):
-            for dname in days_to_schedule:
-                day_offsets = {
-                    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
-                    "friday": 4, "saturday": 5, "sunday": 6
-                }
-                offset = day_offsets.get(dname, 0)
-                allowed_dates.append(base_date + timedelta(days=w * 7 + offset))
+        for d in range(28):
+            curr_date = base_date + timedelta(days=d)
+            day_name = curr_date.strftime("%A").lower()
+            if day_name in all_avail_days:
+                allowed_dates.append(curr_date)
 
-    # 4. Distribute tasks chronologically across the allowed dates
+    # Sort allowed dates chronologically
+    allowed_dates.sort()
+
+    # 3. Distribute tasks date-by-date (preserving block-by-block chronological grouping)
     num_dates = len(allowed_dates)
     tasks_per_day = math.ceil(len(tasks) / num_dates) if num_dates > 0 else 1
     
     day_sessions_count = {}  # date_str -> count of tasks scheduled on it
 
     for i, task in enumerate(tasks):
-        # Find the date index
+        # Determine the target date index
         date_idx = i // tasks_per_day
         if date_idx >= len(allowed_dates):
             date_idx = len(allowed_dates) - 1 # Fallback to the last available day
         
         target_date = allowed_dates[date_idx]
         date_str = target_date.strftime("%Y-%m-%d")
+        day_name_lower = target_date.strftime("%A").lower()
         
         # Get session index on this day
         session_seq = day_sessions_count.get(date_str, 0)
         day_sessions_count[date_str] = session_seq + 1
         
-        # Calculate time slot
-        if target_date.strftime("%A").lower() in ["saturday", "sunday"]:
-            s_min = pref_start_min + session_seq * pref_duration
-            e_min = s_min + pref_duration
-        else:
-            s_min = start_min + session_seq * duration
-            e_min = s_min + duration
+        # Find all slots that apply to this day of the week
+        matching_slots = [s for s in slots if day_name_lower in s["days"]]
+        if not matching_slots:
+            # Fallback if no matching slot found
+            matching_slots = [{"start_min": 19 * 60, "end_min": 20 * 60 + 30}]
+            
+        # Select the slot corresponding to this session sequence on this day
+        slot_idx = session_seq % len(matching_slots)
+        slot = matching_slots[slot_idx]
+        
+        start_min = slot["start_min"]
+        end_min = slot["end_min"]
+        duration = end_min - start_min
+        if duration <= 0:
+            duration = 90
+            
+        # Calculate how many times we've wrapped around the slots list on this day
+        shift_multiplier = session_seq // len(matching_slots)
+        
+        # Calculate time range
+        s_min = start_min + shift_multiplier * duration
+        e_min = s_min + duration
             
         # Adjust for midnight rollover (if s_min is 1440 minutes or more)
         days_shift = s_min // 1440
@@ -186,9 +258,8 @@ def generate_schedule(tasks: list, availability: str, sessions_pref: str, deadli
         s_min_day = s_min % 1440
         e_min_day = e_min % 1440
         
-        # If e_min_day ends up equal to s_min_day due to modulo, keep duration separate to avoid 0-duration ranges
         if e_min_day == s_min_day:
-            e_min_day = s_min_day + (e_min - s_min)
+            e_min_day = s_min_day + duration
             
         start_time_str = f"{s_min_day // 60:02d}:{s_min_day % 60:02d}"
         end_time_str = f"{e_min_day // 60:02d}:{e_min_day % 60:02d}"
@@ -207,4 +278,5 @@ def generate_schedule(tasks: list, availability: str, sessions_pref: str, deadli
         })
         
     return schedule
+
 
