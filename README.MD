@@ -183,3 +183,13 @@ To deploy the entire application to Google Cloud Run, execute the following comm
    - `GOOGLE_CLIENT_ID`
    - `GOOGLE_CLIENT_SECRET`
    - `GOOGLE_TOKEN_JSON`: Paste the JSON content of your locally authenticated `~/.google-workspace-mcp/token.json` file to support headless OAuth bypass.
+
+---
+
+## 10. Presentation & Deliverables
+
+All presentation materials are located in the [docs/](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs) folder:
+
+- **Presentation Slides (PowerPoint)**: [The_Planning_Concierge.pptx](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pptx)
+- **Presentation Slides (PDF format)**: [The_Planning_Concierge.pdf](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pdf)
+- **Video Presentation Script (in Spanish)**: [presentation_script.MD](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/presentation_script.MD)
