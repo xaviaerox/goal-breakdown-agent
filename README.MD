@@ -23,6 +23,7 @@
 
 <p align="center">
   <a href="https://goal-breakdown-agent-61703236417.us-central1.run.app/"><strong>🚀 Probar Demo en Vivo</strong></a> • 
+  <a href="https://youtu.be/Yjyu_2OFxck"><strong>🎥 Video de Demostración</strong></a> • 
   <a href="docs/presentation_script.MD"><strong>🎬 Guión de Presentación</strong></a> • 
   <a href="docs/"><strong>📂 Diapositivas y Materiales</strong></a> • 
   <a href="tests/"><strong>🧪 Pruebas Unitarias</strong></a> • 
@@ -204,6 +205,7 @@ Para subir el proyecto a producción en Cloud Run, utiliza PowerShell desde la c
 
 Todos los archivos relativos a la presentación del proyecto Capstone se encuentran consolidados en la carpeta [docs/](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs):
 
+* **Video de Demostración**: [YouTube Video](https://youtu.be/Yjyu_2OFxck)
 * **Diapositivas en PowerPoint**: [The_Planning_Concierge.pptx](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pptx)
 * **Diapositivas en formato PDF**: [The_Planning_Concierge.pdf](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/The_Planning_Concierge.pdf)
 * **Guión Expositivo (Español, máx. 5 min)**: [presentation_script.MD](file:///c:/Users/Xaviaerox/Documents/GitHub/goal-breakdown-agent/docs/presentation_script.MD)
